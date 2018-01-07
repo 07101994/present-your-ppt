@@ -3,6 +3,7 @@ package rts.pptviewer;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
@@ -25,6 +26,7 @@ import com.google.android.gms.ads.AdView;
 import com.itsrts.pptviewer.PPTViewer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,11 +59,20 @@ public class MainActivity extends Activity {
 				Uri uri = i.getData();
 				if (uri != null) {
 					Log.d(TAG, "uri.getPath: " + uri.getPath());
-					path = getPath(getApplicationContext(), uri);/* uri.getPath();*/
+					path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
+					try {
+						InputStream inputStream = this.getContentResolver().openInputStream(uri);
+						CopyRAWtoSDCard(inputStream, path);
+					} catch (FileNotFoundException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
 				} else {
 					path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
 					try {
-						CopyRAWtoSDCard(R.raw.presentyourppt, path);
+						InputStream in = getResources().openRawResource(R.raw.presentyourppt);
+						CopyRAWtoSDCard(in, path);
 					} catch (IOException e) {
 						e.printStackTrace();
 						Log.e("Error", e.getMessage());
@@ -115,7 +126,8 @@ public class MainActivity extends Activity {
 						} else {
 							path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
 							try {
-								CopyRAWtoSDCard(R.raw.presentyourppt, path);
+								InputStream in = getResources().openRawResource(R.raw.presentyourppt);
+								CopyRAWtoSDCard(in, path);
 							} catch (IOException e) {
 								e.printStackTrace();
 								Log.e("Error", e.getMessage());
@@ -154,21 +166,19 @@ public class MainActivity extends Activity {
 		mAdView.loadAd(adRequest);
 	}
 
-	private void CopyRAWtoSDCard(int id, String path) throws IOException {
-		InputStream in = getResources().openRawResource(id);
+	private void CopyRAWtoSDCard(InputStream inputStream, String path) throws IOException {
 		FileOutputStream out = new FileOutputStream(path);
 		byte[] buff = new byte[1024];
 		int read = 0;
 		try {
-			while ((read = in.read(buff)) > 0) {
+			while ((read = inputStream.read(buff)) > 0) {
 				out.write(buff, 0, read);
 			}
 		} finally {
-			in.close();
+			inputStream.close();
 			out.close();
 		}
 	}
-
 
 	/**
 	 * Get a file path from a Uri. This will get the the path for Storage Access
