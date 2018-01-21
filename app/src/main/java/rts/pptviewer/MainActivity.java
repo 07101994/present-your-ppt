@@ -122,7 +122,15 @@ public class MainActivity extends Activity {
 						Uri uri = i.getData();
 						if (uri != null) {
 							Log.d(TAG, "uri.getPath: " + uri.getPath());
-							path = getPath(getApplicationContext(), uri);/* uri.getPath();*/
+							path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
+							try {
+								InputStream inputStream = this.getContentResolver().openInputStream(uri);
+								CopyRAWtoSDCard(inputStream, path);
+							} catch (FileNotFoundException e) {
+								e.printStackTrace();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
 						} else {
 							path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
 							try {
