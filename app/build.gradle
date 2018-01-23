@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
-    buildToolsVersion '26.0.2'
+    compileSdkVersion 26
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "com.arrowsappstudios.pptviewer"
         minSdkVersion 14
-        targetSdkVersion 23
+        targetSdkVersion 26
         versionCode 3
         versionName "1.2"
     }
@@ -21,6 +21,8 @@ android {
 }
 
 dependencies {
+    implementation 'com.android.support.constraint:constraint-layout:1.0.2'
+    implementation 'com.android.support:design:27.0.2'
     compile 'com.android.support:appcompat-v7:27.0.2'
     compile 'com.android.support:support-v4:27.0.2'
     compile 'com.google.android.gms:play-services-ads:11.8.0'

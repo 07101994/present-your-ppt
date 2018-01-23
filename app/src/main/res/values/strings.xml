@@ -3,5 +3,9 @@
 
     <string name="app_name">Present Your PPT</string>
     <string name="banner_ad_unit_id">ca-app-pub-5565829267699786/9883790505</string>
+    <string name="title_activity_pptx">PPTXActivity</string>
+    <string name="open_file">Open file</string>
+    <string name="full_screen">Full screen</string>
+    <string name="pptFileName">presentyourppt.ppt</string>
 
 </resources>

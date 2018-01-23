@@ -1,112 +1,122 @@
 package rts.pptviewer;
 
 import android.Manifest;
-import android.annotation.TargetApi;
-import android.app.Activity;
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
-import android.widget.Toast;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.animation.DecelerateInterpolator;
 
+import com.arrowsappstudios.pptviewer.helpers.FileHelper;
+import com.arrowsappstudios.pptviewer.helpers.IFileHelper;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.itsrts.pptviewer.PPTViewer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static android.content.ContentValues.TAG;
+public class MainActivity extends AppCompatActivity {
 
-public class MainActivity extends Activity {
-
+	final int HEADER_HIDE_ANIM_DURATION = 500;
+	Toolbar toolbar;
 	PPTViewer pptViewer;
 	final int REQUEST_PERMISSION_ID = 10;
+	IFileHelper fileHelper;
+	private static final int PICK_FILE_RESULT_CODE = 1;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-        boolean permissionsAvailable = false;
+		Initialize();
 
-        int storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        permissionsAvailable = storagePermission == PackageManager.PERMISSION_GRANTED;
-
-		pptViewer = (PPTViewer) findViewById(R.id.pptviewer);
-
-		if(permissionsAvailable) {
+		if(isStoragePermissionsAvailable()) {
 			String path = null;
 			Intent i = getIntent();
 			if (i != null) {
-				Uri uri = i.getData();
-				if (uri != null) {
-					Log.d(TAG, "uri.getPath: " + uri.getPath());
-					path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
-					try {
-						InputStream inputStream = this.getContentResolver().openInputStream(uri);
-						CopyRAWtoSDCard(inputStream, path);
-					} catch (FileNotFoundException e) {
-						e.printStackTrace();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				} else {
-					path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
-					try {
-						InputStream in = getResources().openRawResource(R.raw.presentyourppt);
-						CopyRAWtoSDCard(in, path);
-					} catch (IOException e) {
-						e.printStackTrace();
-						Log.e("Error", e.getMessage());
-					}
-					//path = Uri.parse(path).getPath();
-					//path = i.getStringExtra("dst");//"/sdcard/talkaboutjvm.pptx";
-                /*if(TextUtils.isEmpty(path)){
-//                    Toast.makeText(this,"Path is Empty!!", Toast.LENGTH_LONG).show();
-//                    finish();return;
-                    path="/sdcard/aaa/example.pptx";
-                }*/
-					File demoFile = new File(path);
-					if (!demoFile.exists()) {
-						Toast.makeText(this, path + " not exist!", Toast.LENGTH_LONG).show();
-						finish();
-						return;
-					}
-				}
+				InputStream inputStream = getInputStream(i);
+				path = copyFile(inputStream);
 			}
 
-
-			pptViewer.setNext_img(R.drawable.next).setPrev_img(R.drawable.prev)
-					.setSettings_img(R.drawable.settings)
-					.setZoomin_img(R.drawable.zoomin)
-					.setZoomout_img(R.drawable.zoomout);
-			pptViewer.loadPPT(this, path);
+			loadPPT(path);
 
 			prepareAds();
 		}
 		else{
-			List<String> permissionsList = new ArrayList<>();
-			permissionsList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-			ActivityCompat.requestPermissions(this,permissionsList.toArray(new String[permissionsList.size()]),REQUEST_PERMISSION_ID);
+			RequestPermissions();
 		}
+	}
+
+	@Nullable
+	private InputStream getInputStream(Intent i) {
+		Uri uri = i.getData();
+		InputStream inputStream = null;
+		if (uri != null) {
+			try {
+				inputStream = this.getContentResolver().openInputStream(uri);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+		} else {
+			inputStream = getResources().openRawResource(R.raw.presentyourppt);
+		}
+		return inputStream;
+	}
+
+	@NonNull
+	private String copyFile(InputStream inputStream) {
+		String path;
+		path = Environment.getExternalStorageDirectory() + File.separator + getString(R.string.pptFileName);
+		try {
+			fileHelper.CopyFile(inputStream, path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return path;
+	}
+
+	private void loadPPT(String path) {
+		pptViewer.setNext_img(R.drawable.next).setPrev_img(R.drawable.prev)
+				.setSettings_img(R.drawable.settings)
+				.setZoomin_img(R.drawable.zoomin)
+				.setZoomout_img(R.drawable.zoomout);
+		pptViewer.loadPPT(this, path);
+	}
+
+	private void RequestPermissions() {
+		List<String> permissionsList = new ArrayList<>();
+		permissionsList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+		ActivityCompat.requestPermissions(this,permissionsList.toArray(new String[permissionsList.size()]),REQUEST_PERMISSION_ID);
+	}
+
+	private boolean isStoragePermissionsAvailable() {
+		boolean permissionsAvailable = false;
+
+		int storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+		permissionsAvailable = storagePermission == PackageManager.PERMISSION_GRANTED;
+		return permissionsAvailable;
+	}
+
+	private void Initialize() {
+		fileHelper = FileHelper.getInstance();
+		toolbar = (Toolbar) findViewById(R.id.toolbar);
+		setSupportActionBar(toolbar);
+		pptViewer = (PPTViewer) findViewById(R.id.pptviewer);
 	}
 
 
@@ -119,44 +129,17 @@ public class MainActivity extends Activity {
 					String path = null;
 					Intent i = getIntent();
 					if (i != null) {
-						Uri uri = i.getData();
-						if (uri != null) {
-							Log.d(TAG, "uri.getPath: " + uri.getPath());
-							path = getPath(getApplicationContext(), uri);/* uri.getPath();*/
-						} else {
-							path = Environment.getExternalStorageDirectory() + File.separator + "presentyourppt.ppt";
-							try {
-								InputStream in = getResources().openRawResource(R.raw.presentyourppt);
-								CopyRAWtoSDCard(in, path);
-							} catch (IOException e) {
-								e.printStackTrace();
-								Log.e("Error", e.getMessage());
-							}
-							//path = Uri.parse(path).getPath();
-							//path = i.getStringExtra("dst");//"/sdcard/talkaboutjvm.pptx";
-                /*if(TextUtils.isEmpty(path)){
-//                    Toast.makeText(this,"Path is Empty!!", Toast.LENGTH_LONG).show();
-//                    finish();return;
-                    path="/sdcard/aaa/example.pptx";
-                }*/
-							File demoFile = new File(path);
-							if (!demoFile.exists()) {
-								Toast.makeText(this, path + " not exist!", Toast.LENGTH_LONG).show();
-								finish();
-								return;
-							}
-						}
+						InputStream inputStream = getInputStream(i);
+						path = copyFile(inputStream);
 					}
 
-
-					pptViewer.setNext_img(R.drawable.next).setPrev_img(R.drawable.prev)
-							.setSettings_img(R.drawable.settings)
-							.setZoomin_img(R.drawable.zoomin)
-							.setZoomout_img(R.drawable.zoomout);
-					pptViewer.loadPPT(this, path);
+					loadPPT(path);
 
 					prepareAds();
-    			}
+				}
+				else{
+					RequestPermissions();
+				}
 		}
 	}
 
@@ -166,194 +149,61 @@ public class MainActivity extends Activity {
 		mAdView.loadAd(adRequest);
 	}
 
-	private void CopyRAWtoSDCard(InputStream inputStream, String path) throws IOException {
-		FileOutputStream out = new FileOutputStream(path);
-		byte[] buff = new byte[1024];
-		int read = 0;
-		try {
-			while ((read = inputStream.read(buff)) > 0) {
-				out.write(buff, 0, read);
-			}
-		} finally {
-			inputStream.close();
-			out.close();
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.menu_main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case R.id.open_file:
+				selectFile();
+				return true;
+			case R.id.fullscreen:
+				hideToolbarWithAnimation();
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
 		}
 	}
 
-	/**
-	 * Get a file path from a Uri. This will get the the path for Storage Access
-	 * Framework Documents, as well as the _data field for the MediaStore and
-	 * other file-based ContentProviders.
-	 *
-	 * @param context The context.
-	 * @param uri The Uri to query.
-	 * @author paulburke
-	 */
-	@TargetApi(Build.VERSION_CODES.KITKAT)
-	public static String getPath(final Context context, final Uri uri) {
+	private void hideToolbarWithAnimation() {
+		toolbar.animate()
+                .translationY(0)
+                .alpha(1).setDuration(HEADER_HIDE_ANIM_DURATION)
+                .setInterpolator(new DecelerateInterpolator());
+	}
 
-		Log.d(TAG + " File -",
-				"Authority: " + uri.getAuthority() +
-						", Fragment: " + uri.getFragment() +
-						", Port: " + uri.getPort() +
-						", Query: " + uri.getQuery() +
-						", Scheme: " + uri.getScheme() +
-						", Host: " + uri.getHost() +
-						", Segments: " + uri.getPathSegments().toString()
-		);
+	private void selectFile() {
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		intent.setType("application/vnd.ms-powerpoint");
+		startActivityForResult(intent,PICK_FILE_RESULT_CODE);
+	}
 
-		final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch(requestCode){
+			case PICK_FILE_RESULT_CODE:
+				if(resultCode==RESULT_OK){
+					if(isStoragePermissionsAvailable()) {
+						String path = null;
+						if (data != null) {
+							InputStream inputStream = getInputStream(data);
+							path = copyFile(inputStream);
+						}
 
-		// DocumentProvider
-		if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) {
-			// LocalStorageProvider
-	/*		if (isLocalStorageDocument(uri)) {
-				// The path is the id
-				return DocumentsContract.getDocumentId(uri);
-			}
-	*/		// ExternalStorageProvider
-			if (isExternalStorageDocument(uri)) {
-				final String docId = DocumentsContract.getDocumentId(uri);
-				final String[] split = docId.split(":");
-				final String type = split[0];
+						loadPPT(path);
 
-				if ("primary".equalsIgnoreCase(type)) {
-					return Environment.getExternalStorageDirectory() + "/" + split[1];
-				} else {
-					String sdpath=null;
-					Boolean isSDPresent = android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED);
-
-					if(new File("/storage/extSdCard/").exists()){
-						sdpath="/storage/extSdCard/";
-						Log.i("Sd Cardext Path",sdpath);
+						prepareAds();
 					}
-					if(isSDPresent){
-						File extdir = Environment.getExternalStorageDirectory();
-						File stats = new File(extdir.getAbsolutePath());
-						sdpath = extdir.getAbsolutePath() + "/";
-						Log.i("Sd Card1 Path",sdpath);
+					else{
+						RequestPermissions();
 					}
-
-					if(new File(sdpath + split[1]).exists()){
-						return sdpath + split[1];
-					}
-					else {
-						return null;
-					}
-/*
-					Log.i ("EXT", sdpath + split[1]);
-					return sdpath + split[1];*/
 				}
-			}
-			// DownloadsProvider
-			else if (isDownloadsDocument(uri)) {
-
-				final String id = DocumentsContract.getDocumentId(uri);
-				final Uri contentUri = ContentUris.withAppendedId(
-						Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
-
-				return getDataColumn(context, contentUri, null, null);
-			}
-			// MediaProvider
-			else if (isMediaDocument(uri)) {
-				final String docId = DocumentsContract.getDocumentId(uri);
-				final String[] split = docId.split(":");
-				final String type = split[0];
-
-				Uri contentUri = null;
-				if ("image".equals(type)) {
-					contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-				} else if ("video".equals(type)) {
-					contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-				} else if ("audio".equals(type)) {
-					contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-				}
-
-				final String selection = "_id=?";
-				final String[] selectionArgs = new String[] {
-						split[1]
-				};
-
-				return getDataColumn(context, contentUri, selection, selectionArgs);
-			}
+				break;
 		}
-		// MediaStore (and general)
-		else if ("content".equalsIgnoreCase(uri.getScheme())) {
-
-			// Return the remote address
-			if (isGooglePhotosUri(uri))
-				return uri.getLastPathSegment();
-
-			return getDataColumn(context, uri, null, null);
-		}
-		// File
-		else if ("file".equalsIgnoreCase(uri.getScheme())) {
-			return uri.getPath();
-		}
-
-		return null;
-	}
-
-
-	public static boolean isGooglePhotosUri(Uri uri) {
-		return "com.google.android.apps.photos.content".equals(uri.getAuthority());
-	}
-
-	/**
-	 * Get the value of the data column for this Uri. This is useful for
-	 * MediaStore Uris, and other file-based ContentProviders.
-	 *
-	 * @param context The context.
-	 * @param uri The Uri to query.
-	 * @param selection (Optional) Filter used in the query.
-	 * @param selectionArgs (Optional) Selection arguments used in the query.
-	 * @return The value of the _data column, which is typically a file path.
-	 */
-	public static String getDataColumn(Context context, Uri uri, String selection,
-									   String[] selectionArgs) {
-
-		Cursor cursor = null;
-		final String column = "_data";
-		final String[] projection = {
-				column
-		};
-
-		try {
-			cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs,
-					null);
-			if (cursor != null && cursor.moveToFirst()) {
-				final int column_index = cursor.getColumnIndexOrThrow(column);
-				return cursor.getString(column_index);
-			}
-		} finally {
-			if (cursor != null)
-				cursor.close();
-		}
-		return null;
-	}
-
-
-	/**
-	 * @param uri The Uri to check.
-	 * @return Whether the Uri authority is ExternalStorageProvider.
-	 */
-	public static boolean isExternalStorageDocument(Uri uri) {
-		return "com.android.externalstorage.documents".equals(uri.getAuthority());
-	}
-
-	/**
-	 * @param uri The Uri to check.
-	 * @return Whether the Uri authority is DownloadsProvider.
-	 */
-	public static boolean isDownloadsDocument(Uri uri) {
-		return "com.android.providers.downloads.documents".equals(uri.getAuthority());
-	}
-
-	/**
-	 * @param uri The Uri to check.
-	 * @return Whether the Uri authority is MediaProvider.
-	 */
-	public static boolean isMediaDocument(Uri uri) {
-		return "com.android.providers.media.documents".equals(uri.getAuthority());
 	}
 }
