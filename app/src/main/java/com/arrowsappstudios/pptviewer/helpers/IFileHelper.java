@@ -14,5 +14,5 @@ public interface IFileHelper {
      * @param path
      * @throws IOException
      */
-    void CopyFile(InputStream inputStream, String path) throws IOException;
+    void copyFile(InputStream inputStream, String path) throws IOException;
 }

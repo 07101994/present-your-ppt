@@ -8,13 +8,15 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.AppBarLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.animation.DecelerateInterpolator;
+import android.view.View;
 
 import com.arrowsappstudios.pptviewer.helpers.FileHelper;
 import com.arrowsappstudios.pptviewer.helpers.IFileHelper;
@@ -31,11 +33,10 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-	final int HEADER_HIDE_ANIM_DURATION = 500;
-	Toolbar toolbar;
-	PPTViewer pptViewer;
-	final int REQUEST_PERMISSION_ID = 10;
-	IFileHelper fileHelper;
+	private AppBarLayout appBarLayout;
+	private PPTViewer pptViewer;
+	private final int REQUEST_PERMISSION_ID = 10;
+	private IFileHelper fileHelper;
 	private static final int PICK_FILE_RESULT_CODE = 1;
 
 	@Override
@@ -43,23 +44,32 @@ public class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		Initialize();
+		initialize();
 
 		if(isStoragePermissionsAvailable()) {
-			String path = null;
-			Intent i = getIntent();
-			if (i != null) {
-				InputStream inputStream = getInputStream(i);
-				path = copyFile(inputStream);
-			}
-
-			loadPPT(path);
-
-			prepareAds();
+			Intent intent = getIntent();
+			processFile(intent);
 		}
 		else{
-			RequestPermissions();
+			requestPermissions();
 		}
+	}
+
+	private void processFile(Intent intent) {
+		String path = copyFileAndGetPath(intent);
+
+		loadPPT(path);
+
+		prepareAds();
+	}
+
+	private String copyFileAndGetPath(Intent intent) {
+		String path = "";
+		if (intent != null) {
+            InputStream inputStream = getInputStream(intent);
+            path = copyFile(inputStream);
+        }
+		return path;
 	}
 
 	@Nullable
@@ -83,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
 		String path;
 		path = Environment.getExternalStorageDirectory() + File.separator + getString(R.string.pptFileName);
 		try {
-			fileHelper.CopyFile(inputStream, path);
+			fileHelper.copyFile(inputStream, path);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -98,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
 		pptViewer.loadPPT(this, path);
 	}
 
-	private void RequestPermissions() {
+	private void requestPermissions() {
 		List<String> permissionsList = new ArrayList<>();
 		permissionsList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
 		ActivityCompat.requestPermissions(this,permissionsList.toArray(new String[permissionsList.size()]),REQUEST_PERMISSION_ID);
@@ -112,13 +122,13 @@ public class MainActivity extends AppCompatActivity {
 		return permissionsAvailable;
 	}
 
-	private void Initialize() {
+	private void initialize() {
 		fileHelper = FileHelper.getInstance();
-		toolbar = (Toolbar) findViewById(R.id.toolbar);
+		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
-		pptViewer = (PPTViewer) findViewById(R.id.pptviewer);
+		pptViewer = findViewById(R.id.pptviewer);
+		appBarLayout = findViewById(R.id.appBarLayout);
 	}
-
 
 	@Override
 	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -126,25 +136,17 @@ public class MainActivity extends AppCompatActivity {
 		switch (requestCode){
 			case REQUEST_PERMISSION_ID:
 				if(grantResults[0]==PackageManager.PERMISSION_GRANTED){
-					String path = null;
-					Intent i = getIntent();
-					if (i != null) {
-						InputStream inputStream = getInputStream(i);
-						path = copyFile(inputStream);
-					}
-
-					loadPPT(path);
-
-					prepareAds();
+					Intent intent = getIntent();
+					processFile(intent);
 				}
 				else{
-					RequestPermissions();
+					requestPermissions();
 				}
 		}
 	}
 
 	private void prepareAds() {
-		AdView mAdView = (AdView) findViewById(R.id.adView);
+		AdView mAdView = findViewById(R.id.adView);
 		AdRequest adRequest = new AdRequest.Builder().build();
 		mAdView.loadAd(adRequest);
 	}
@@ -162,24 +164,14 @@ public class MainActivity extends AppCompatActivity {
 			case R.id.open_file:
 				selectFile();
 				return true;
-			case R.id.fullscreen:
-				hideToolbarWithAnimation();
-				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}
 	}
 
-	private void hideToolbarWithAnimation() {
-		toolbar.animate()
-                .translationY(0)
-                .alpha(1).setDuration(HEADER_HIDE_ANIM_DURATION)
-                .setInterpolator(new DecelerateInterpolator());
-	}
-
 	private void selectFile() {
 		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-		intent.setType("application/vnd.ms-powerpoint");
+		intent.setType(getString(R.string.ppt_mime_type));
 		startActivityForResult(intent,PICK_FILE_RESULT_CODE);
 	}
 
@@ -187,23 +179,22 @@ public class MainActivity extends AppCompatActivity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		switch(requestCode){
 			case PICK_FILE_RESULT_CODE:
-				if(resultCode==RESULT_OK){
-					if(isStoragePermissionsAvailable()) {
-						String path = null;
-						if (data != null) {
-							InputStream inputStream = getInputStream(data);
-							path = copyFile(inputStream);
-						}
-
-						loadPPT(path);
-
-						prepareAds();
-					}
-					else{
-						RequestPermissions();
-					}
-				}
+				processActivityResult(resultCode, data);
+				break;
+			default:
+				Log.d("MainActivity","Pick file failed");
 				break;
 		}
+	}
+
+	private void processActivityResult(int resultCode, Intent data) {
+		if(resultCode==RESULT_OK){
+            if(isStoragePermissionsAvailable()) {
+				processFile(data);
+            }
+            else{
+                requestPermissions();
+            }
+        }
 	}
 }

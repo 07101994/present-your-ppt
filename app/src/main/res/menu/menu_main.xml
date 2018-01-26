@@ -10,10 +10,4 @@
         android:icon="@drawable/ic_open_file"
         android:title="@string/open_file"
         app:showAsAction="ifRoom" />
-    <item
-        android:id="@+id/fullscreen"
-        android:orderInCategory="110"
-        android:icon="@drawable/ic_fullscreen"
-        android:title="@string/full_screen"
-        app:showAsAction="ifRoom" />
 </menu>

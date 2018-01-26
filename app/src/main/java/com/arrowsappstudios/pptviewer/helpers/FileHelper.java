@@ -27,7 +27,7 @@ public class FileHelper implements IFileHelper {
      * @throws IOException
      */
     @Override
-    public void CopyFile(InputStream inputStream, String path) throws IOException {
+    public void copyFile(InputStream inputStream, String path) throws IOException {
         FileOutputStream out = new FileOutputStream(path);
         byte[] buff = new byte[1024];
         int read = 0;
