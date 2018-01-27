@@ -33,7 +33,6 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-	private AppBarLayout appBarLayout;
 	private PPTViewer pptViewer;
 	private final int REQUEST_PERMISSION_ID = 10;
 	private IFileHelper fileHelper;
@@ -73,8 +72,8 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	@Nullable
-	private InputStream getInputStream(Intent i) {
-		Uri uri = i.getData();
+	private InputStream getInputStream(Intent intent) {
+		Uri uri = intent.getData();
 		InputStream inputStream = null;
 		if (uri != null) {
 			try {
@@ -115,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private boolean isStoragePermissionsAvailable() {
-		boolean permissionsAvailable = false;
+		boolean permissionsAvailable;
 
 		int storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 		permissionsAvailable = storagePermission == PackageManager.PERMISSION_GRANTED;
@@ -127,7 +126,6 @@ public class MainActivity extends AppCompatActivity {
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 		pptViewer = findViewById(R.id.pptviewer);
-		appBarLayout = findViewById(R.id.appBarLayout);
 	}
 
 	@Override
