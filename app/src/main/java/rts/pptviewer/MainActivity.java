@@ -5,10 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.AppBarLayout;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -16,7 +14,6 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import com.arrowsappstudios.pptviewer.helpers.FileHelper;
 import com.arrowsappstudios.pptviewer.helpers.IFileHelper;
@@ -90,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
 	@NonNull
 	private String copyFile(InputStream inputStream) {
 		String path;
-		path = Environment.getExternalStorageDirectory() + File.separator + getString(R.string.pptFileName);
+		path = getFilesDir() + File.separator + getString(R.string.pptFileName);
 		try {
 			fileHelper.copyFile(inputStream, path);
 		} catch (IOException e) {
